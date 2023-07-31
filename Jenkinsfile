@@ -1,7 +1,7 @@
 pipeline {
     agent {
         docker {
-            image 'benjaminmnoer/basebuild:latest'
+            image 'benjaminmnoer/trinity-basebuild:latest'
         }
     }
     stages {
