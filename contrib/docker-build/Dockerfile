@@ -16,6 +16,7 @@ RUN apt-get update && apt-get install -y \
 
 ENV ACE_ROOT=/usr/include/ace
 ENV TBB_ROOT_DIR=/usr/include/tbb
+ENV TZ="Europe/Paris"
 
 WORKDIR /vmangos/
 RUN git clone -b master https://github.com/Benjaminmnoer/vmangoscore.git src
