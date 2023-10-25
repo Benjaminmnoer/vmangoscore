@@ -2684,15 +2684,8 @@ float Unit::GetUnitParryChance() const
 
     if (Player const* pPlayer = ToPlayer())
     {
-        if (pPlayer->CanParry())
-        {
-            Item* tmpitem = pPlayer->GetWeaponForAttack(BASE_ATTACK, true, true);
-            if (!tmpitem)
-                tmpitem = pPlayer->GetWeaponForAttack(OFF_ATTACK, true, true);
-
-            if (tmpitem)
-                chance = GetFloatValue(PLAYER_PARRY_PERCENTAGE);
-        }
+        if (pPlayer->CanParry() && pPlayer->HasWeaponForParry())
+            chance = GetFloatValue(PLAYER_PARRY_PERCENTAGE);
     }
     else
     {
@@ -10529,7 +10522,12 @@ void Unit::UpdateSplineMovement(uint32 t_diff)
     bool arrived = movespline->Finalized();
 
     if (arrived)
+    {
         DisableSpline();
+
+        if (HasPendingSplineDone() && !IsPlayer() && !GetPossessorGuid().IsPlayer())
+            SetSplineDonePending(false);
+    }
     else if (!movespline->isCyclic() && movespline->getLastPointSent() >= 0 && movespline->getLastPointSent() < (movespline->currentPathIdx() + 3))
     {
         WorldPacket data(SMSG_MONSTER_MOVE, 64);

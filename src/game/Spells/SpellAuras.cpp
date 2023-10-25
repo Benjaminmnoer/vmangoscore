@@ -1786,6 +1786,8 @@ void Aura::HandleAuraDummy(bool apply, bool Real)
                         m_modifier.periodictime = 5 * IN_MILLISECONDS; // expected to tick with 5 sec period
                         return;
                     }
+                    case 16739: // Orb of Deception (before patch 1.7)
+                        return HandleAuraTransform(apply, Real);
                     case 21827: // Frostwolf Aura DND
                     case 21863: // Alterac Ram Aura DND
                     {
@@ -1966,6 +1968,8 @@ void Aura::HandleAuraDummy(bool apply, bool Real)
 
                 return;
             }
+            case 16739: // Orb of Deception (before patch 1.7)
+                return HandleAuraTransform(apply, Real);
             case 20939: // Undying Soul - Dummy aura used for Unstuck command
             {
                 if (m_removeMode == AURA_REMOVE_BY_EXPIRE)
@@ -4528,6 +4532,7 @@ float Aura::CalculateDotDamage() const
     {
         case SPELLFAMILY_DRUID:
         {
+#if SUPPORTED_CLIENT_BUILD > CLIENT_BUILD_1_11_2
             // Rip
             if (spellProto->IsFitToFamilyMask<CF_DRUID_RIP_BITE>())
             {
@@ -4540,6 +4545,7 @@ float Aura::CalculateDotDamage() const
                     damage += caster->GetTotalAttackPowerValue(BASE_ATTACK) * cp / 100;
                 }
             }
+#endif
             break;
         }
         case SPELLFAMILY_ROGUE:
@@ -5191,7 +5197,6 @@ void Aura::HandleAuraModCritPercent(bool apply, bool Real)
     if (GetSpellProto()->EquippedItemClass == -1)
     {
         ((Player*)target)->HandleBaseModValue(CRIT_PERCENTAGE,         FLAT_MOD, m_modifier.m_amount, apply);
-        ((Player*)target)->HandleBaseModValue(OFFHAND_CRIT_PERCENTAGE, FLAT_MOD, m_modifier.m_amount, apply);
         ((Player*)target)->HandleBaseModValue(RANGED_CRIT_PERCENTAGE,  FLAT_MOD, m_modifier.m_amount, apply);
     }
     else

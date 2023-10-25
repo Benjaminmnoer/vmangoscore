@@ -47,7 +47,7 @@
 
 using namespace Spells;
 
-#define SPELL_CHANNEL_UPDATE_INTERVAL (1 * IN_MILLISECONDS)
+#define SPELL_CHANNEL_VISUAL_TIMER 800
 
 extern pEffect SpellEffects[TOTAL_SPELL_EFFECTS];
 
@@ -382,25 +382,15 @@ void Spell::FillTargetMap()
         if (m_spellInfo->Effect[i] == SPELL_EFFECT_NONE)
             continue;
 
-        // targets for TARGET_LOCATION_SCRIPT_NEAR_CASTER (A) and TARGET_UNIT_SCRIPT_NEAR_CASTER
-        // for TARGET_GAMEOBJECT_SCRIPT_NEAR_CASTER (A) all is checked in Spell::CheckCast and in Spell::CheckItem
-        // filled in Spell::CheckCast call
-        if (m_spellInfo->EffectImplicitTargetA[i] == TARGET_LOCATION_SCRIPT_NEAR_CASTER ||
-                m_spellInfo->EffectImplicitTargetA[i] == TARGET_UNIT_SCRIPT_NEAR_CASTER ||
-                m_spellInfo->EffectImplicitTargetA[i] == TARGET_GAMEOBJECT_SCRIPT_NEAR_CASTER ||
-                (m_spellInfo->EffectImplicitTargetB[i] == TARGET_UNIT_SCRIPT_NEAR_CASTER && m_spellInfo->EffectImplicitTargetA[i] != TARGET_UNIT_CASTER))
-            continue;
-
         // TODO: find a way so this is not needed?
         // for area auras always add caster as target (needed for totems for example)
-        if (m_casterUnit && IsAreaAuraEffect(m_spellInfo->Effect[i]))
-            AddUnitTarget(m_casterUnit, SpellEffectIndex(i));
-
-#if SUPPORTED_CLIENT_BUILD <= CLIENT_BUILD_1_11_2
-        // Pre 1.12 most of the quest complete spells don't have correct target set.
-        if (m_casterUnit && m_spellInfo->Effect[i] == SPELL_EFFECT_QUEST_COMPLETE)
-            AddUnitTarget(m_casterUnit, SpellEffectIndex(i));
-#endif
+        if (m_casterUnit)
+        {
+            if (IsAreaAuraEffect(m_spellInfo->Effect[i]) ||
+                m_spellInfo->Effect[i] == SPELL_EFFECT_LANGUAGE ||
+                m_spellInfo->Effect[i] == SPELL_EFFECT_QUEST_COMPLETE)
+                AddUnitTarget(m_casterUnit, SpellEffectIndex(i));
+        }
 
         // If same target already filled, use it
         // Example: AoE fear has effects speedup and modfear, with maxtargets = 1
@@ -645,9 +635,6 @@ void Spell::FillTargetMap()
                     case TARGET_LOCATION_CASTER_DEST:
                         SetTargetMap(SpellEffectIndex(i), m_spellInfo->EffectImplicitTargetA[i], tmpUnitMap);
                         break;
-                    case TARGET_LOCATION_SCRIPT_NEAR_CASTER:         // B case filled in CheckCast but we need fill unit list base at A case
-                        SetTargetMap(SpellEffectIndex(i), m_spellInfo->EffectImplicitTargetA[i], tmpUnitMap);
-                        break;
                     default:
                         SetTargetMap(SpellEffectIndex(i), m_spellInfo->EffectImplicitTargetA[i], tmpUnitMap);
                         SetTargetMap(SpellEffectIndex(i), m_spellInfo->EffectImplicitTargetB[i], tmpUnitMap);
@@ -705,6 +692,173 @@ void Spell::FillTargetMap()
             }
         }
     }
+}
+
+SpellCastResult Spell::CheckScriptTargeting(SpellEffectIndex effIndex, uint32 chainTargets, float radius, uint32 targetMode, UnitList& tempUnitList)
+{
+    SpellScriptTargetBounds bounds = sSpellMgr.GetSpellScriptTargetBounds(m_spellInfo->Id);
+
+    if (bounds.first == bounds.second)
+    {
+        if (m_spellInfo->EffectImplicitTargetA[effIndex] == TARGET_UNIT_SCRIPT_NEAR_CASTER || m_spellInfo->EffectImplicitTargetB[effIndex] == TARGET_UNIT_SCRIPT_NEAR_CASTER)
+            sLog.Out(LOG_DBERROR, LOG_LVL_MINIMAL, "Spell entry %u, effect %i has EffectImplicitTargetA/EffectImplicitTargetB = TARGET_UNIT_SCRIPT_NEAR_CASTER, but creature are not defined in `spell_script_target`", m_spellInfo->Id, effIndex);
+
+        if (m_spellInfo->EffectImplicitTargetA[effIndex] == TARGET_LOCATION_SCRIPT_NEAR_CASTER || m_spellInfo->EffectImplicitTargetB[effIndex] == TARGET_LOCATION_SCRIPT_NEAR_CASTER)
+            sLog.Out(LOG_DBERROR, LOG_LVL_MINIMAL, "Spell entry %u, effect %i has EffectImplicitTargetA/EffectImplicitTargetB = TARGET_LOCATION_SCRIPT_NEAR_CASTER, but gameobject or creature are not defined in `spell_script_target`", m_spellInfo->Id, effIndex);
+
+        if (m_spellInfo->EffectImplicitTargetA[effIndex] == TARGET_GAMEOBJECT_SCRIPT_NEAR_CASTER)
+            sLog.Out(LOG_DBERROR, LOG_LVL_MINIMAL, "Spell entry %u, effect %i has EffectImplicitTargetA/EffectImplicitTargetB = TARGET_GAMEOBJECT_SCRIPT_NEAR_CASTER, but gameobject are not defined in `spell_script_target`", m_spellInfo->Id, effIndex);
+    
+        return SPELL_FAILED_BAD_TARGETS;
+    }
+
+    Creature* targetExplicit = nullptr;            // used for cases where a target is provided (by script for example)
+    Creature* creatureScriptTarget = nullptr;
+    GameObject* goScriptTarget = nullptr;
+
+    for (auto i_spellST = bounds.first; i_spellST != bounds.second; ++i_spellST)
+    {
+        if (i_spellST->second.CanNotHitWithSpellEffect(SpellEffectIndex(effIndex)))
+            continue;
+
+        switch (i_spellST->second.type)
+        {
+        case SPELL_TARGET_TYPE_GAMEOBJECT:
+        {
+            GameObject* p_GameObject = nullptr;
+
+            if (i_spellST->second.targetEntry)
+            {
+                MaNGOS::NearestGameObjectEntryFitConditionInObjectRangeCheck go_check(*m_caster, i_spellST->second.targetEntry, radius, i_spellST->second.conditionId);
+                MaNGOS::GameObjectLastSearcher<MaNGOS::NearestGameObjectEntryFitConditionInObjectRangeCheck> checker(p_GameObject, go_check);
+                Cell::VisitGridObjects(m_caster, checker, radius);
+
+                if (p_GameObject)
+                {
+                    // remember found target and range, next attempt will find more near target with another entry
+                    creatureScriptTarget = nullptr;
+                    goScriptTarget = p_GameObject;
+                    radius = go_check.GetLastRange();
+                }
+            }
+            else if (focusObject)           // Focus Object
+            {
+                float frange = m_caster->GetDistance(focusObject);
+                if (radius >= frange)
+                {
+                    creatureScriptTarget = nullptr;
+                    goScriptTarget = focusObject;
+                    radius = frange;
+                }
+            }
+            break;
+        }
+        case SPELL_TARGET_TYPE_CREATURE:
+        case SPELL_TARGET_TYPE_DEAD:
+        default:
+        {
+            Creature* p_Creature = nullptr;
+
+            // check if explicit target is provided and check it up against database valid target entry/state
+            if (Unit* pTarget = m_targets.getUnitTarget())
+            {
+                if (pTarget->IsCreature() && pTarget->GetEntry() == i_spellST->second.targetEntry)
+                {
+                    if (i_spellST->second.type == SPELL_TARGET_TYPE_DEAD && ((Creature*)pTarget)->IsCorpse())
+                    {
+                        // always use spellMaxRange, in case GetLastRange returned different in a previous pass
+                        if (pTarget->IsWithinDistInMap(m_caster, radius))
+                            targetExplicit = (Creature*)pTarget;
+                    }
+                    else if (i_spellST->second.type == SPELL_TARGET_TYPE_CREATURE && pTarget->IsAlive())
+                    {
+                        // always use spellMaxRange, in case GetLastRange returned different in a previous pass
+                        if (pTarget->IsWithinDistInMap(m_caster, radius))
+                            targetExplicit = (Creature*)pTarget;
+                    }
+                }
+            }
+
+            // no target provided or it was not valid, so use closest in range
+            if (!targetExplicit)
+            {
+                MaNGOS::NearestCreatureEntryFitConditionInObjectRangeCheck u_check(*m_caster, i_spellST->second.targetEntry, i_spellST->second.type != SPELL_TARGET_TYPE_DEAD, radius, i_spellST->second.conditionId);
+                MaNGOS::CreatureLastSearcher<MaNGOS::NearestCreatureEntryFitConditionInObjectRangeCheck> searcher(p_Creature, u_check);
+
+                // Visit all, need to find also Pet* objects
+                Cell::VisitAllObjects(m_caster, searcher, radius);
+
+                radius = u_check.GetLastRange();
+            }
+
+            // always prefer provided target if it's valid
+            if (targetExplicit)
+                creatureScriptTarget = targetExplicit;
+            else if (p_Creature)
+                creatureScriptTarget = p_Creature;
+
+            if (creatureScriptTarget)
+                goScriptTarget = nullptr;
+
+            break;
+        }
+        }
+    }
+
+    if (creatureScriptTarget)
+    {
+        // store explicit target for TARGET_UNIT_SCRIPT_NEAR_CASTER
+        if (targetMode == TARGET_UNIT_SCRIPT_NEAR_CASTER)
+        {
+            // Fixes Toss Fuel on Bonfire (28806) and Dominion of Soul (16053)
+            if (m_CastItem)
+                m_targets.setUnitTarget(creatureScriptTarget);
+
+            tempUnitList.push_back(creatureScriptTarget);
+        }
+        // store coordinates for TARGET_LOCATION_SCRIPT_NEAR_CASTER
+        else if (targetMode == TARGET_LOCATION_SCRIPT_NEAR_CASTER)
+        {
+            m_targets.setDestination(creatureScriptTarget->GetPositionX(), creatureScriptTarget->GetPositionY(), creatureScriptTarget->GetPositionZ());
+
+            if (m_spellInfo->EffectImplicitTargetA[effIndex] == TARGET_LOCATION_SCRIPT_NEAR_CASTER && m_spellInfo->Effect[effIndex] != SPELL_EFFECT_PERSISTENT_AREA_AURA)
+                tempUnitList.push_back(creatureScriptTarget);
+        }
+    }
+    else if (goScriptTarget)
+    {
+        // store coordinates for TARGET_LOCATION_SCRIPT_NEAR_CASTER
+        if (targetMode == TARGET_LOCATION_SCRIPT_NEAR_CASTER)
+        {
+            m_targets.setDestination(goScriptTarget->GetPositionX(), goScriptTarget->GetPositionY(), goScriptTarget->GetPositionZ());
+
+            if (m_spellInfo->EffectImplicitTargetA[effIndex] == TARGET_LOCATION_SCRIPT_NEAR_CASTER && m_spellInfo->Effect[effIndex] != SPELL_EFFECT_PERSISTENT_AREA_AURA)
+                AddGOTarget(goScriptTarget, SpellEffectIndex(effIndex));
+        }
+        // store explicit target for TARGET_GAMEOBJECT_SCRIPT_NEAR_CASTER
+        else
+        {
+            if (targetMode == TARGET_GAMEOBJECT_SCRIPT_NEAR_CASTER)
+                AddGOTarget(goScriptTarget, SpellEffectIndex(effIndex));
+        }
+    }
+    //Missing DB Entry or targets for this spellEffect.
+    else
+    {
+        /* For TARGET_GAMEOBJECT_SCRIPT_NEAR_CASTER makes DB targets optional not required for now
+        * TODO: Makes more research for this target type
+        */
+        if (targetMode != TARGET_GAMEOBJECT_SCRIPT_NEAR_CASTER)
+        {
+            // not report target not existence for triggered spells
+            if (m_triggeredByAuraSpell || m_IsTriggeredSpell)
+                return SPELL_FAILED_DONT_REPORT;
+            else
+                return SPELL_FAILED_BAD_TARGETS;
+        }
+    }
+
+    return SPELL_CAST_OK;
 }
 
 void Spell::prepareDataForTriggerSystem()
@@ -2988,11 +3142,16 @@ void Spell::SetTargetMap(SpellEffectIndex effIndex, uint32 targetMode, UnitList&
             break;
         }
         case TARGET_UNIT_SCRIPT_NEAR_CASTER:
+        case TARGET_GAMEOBJECT_SCRIPT_NEAR_CASTER:
+        case TARGET_LOCATION_SCRIPT_NEAR_CASTER:
         {
-            if (m_targets.getUnitTarget())
-                targetUnitMap.push_back(m_targets.getUnitTarget());
-            if (m_targets.getItemTarget())
-                AddItemTarget(m_targets.getItemTarget(), effIndex);
+            SpellCastResult result = CheckScriptTargeting(effIndex, 0, radius, targetMode, targetUnitMap);
+            if (result != SPELL_CAST_OK)
+            {
+                SendCastResult(result);
+                finish(false);
+                return;
+            }
             break;
         }
         case TARGET_LOCATION_CASTER_FISHING_SPOT:
@@ -3380,7 +3539,7 @@ void Spell::SetTargetMap(SpellEffectIndex effIndex, uint32 targetMode, UnitList&
                     z = waterLevel;
                 }
 
-                if (!MapManager::IsValidMapCoord(unitTarget->GetMapId(), x, y, z))
+                if (!MapManager::IsValidMapCoord(pUnitTarget->GetMapId(), x, y, z))
                     break;
 
                 pUnitTarget->GetMap()->GetLosHitPosition(srcX, srcY, srcZ, x, y, z, -0.5f);
@@ -4021,6 +4180,7 @@ void Spell::handle_immediate()
         SendChannelStart(m_duration);
         if (m_caster->IsPlayer())
             m_caster->ToPlayer()->RemoveSpellMods(this);
+        InitializeChanneledVisualTimer();
     }
 
     m_targetNum = 0;
@@ -4435,6 +4595,18 @@ void Spell::update(uint32 difftime)
                 }
 
                 finish();
+            }
+            // Periodically send the spell visual kit for some channeled spells
+            // This fixes Tranquility and Starshards visuals
+            else if (m_channeledVisualKit && m_casterUnit)
+            {
+                if (difftime >= m_channeledVisualTimer)
+                {
+                    m_casterUnit->SendPlaySpellVisual(m_channeledVisualKit);
+                    m_channeledVisualTimer = SPELL_CHANNEL_VISUAL_TIMER;
+                }
+                else
+                    m_channeledVisualTimer -= difftime;
             }
         }
         break;
@@ -4997,11 +5169,11 @@ void Spell::SendLogExecute()
 
 void Spell::SendInterrupted(uint8 result)
 {
-    // Nostalrius : fix animation de cast a l'interruption d'un sort
-    // Ce premier paquet ne sert apparement a rien ...
-    // Ce second paquet informe les joueurs aux alentours que le sort a ete interrompu.
+    // Nostalrius: fix cast animation when a spell is interrupted
+    // This first packet is apparently useless...
+    // This second packet informs surrounding players that the spell has been interrupted.
     WorldPacket data(SMSG_SPELL_FAILED_OTHER, (8 + 4));
-    data << m_caster->GetObjectGuid(); // Pareil que pour SMSG_SPELL_FAILURE
+    data << m_caster->GetObjectGuid(); // Same as for SMSG_SPELL_FAILURE
     data << m_spellInfo->Id;
     m_caster->SendObjectMessageToSet(&data, true);
 }
@@ -5158,6 +5330,22 @@ void Spell::SendChannelStart(uint32 duration)
             m_casterUnit->SetChannelObjectGuid(target->GetObjectGuid());
         m_casterUnit->SetUInt32Value(UNIT_CHANNEL_SPELL, m_spellInfo->Id);
     }
+}
+
+void Spell::InitializeChanneledVisualTimer()
+{
+    if (!(m_spellInfo->Custom & SPELL_CUSTOM_SEND_CHANNEL_VISUAL))
+        return;
+
+    if (!m_spellInfo->SpellVisual)
+        return;
+
+    SpellVisualEntry const* pSpellVisual = sSpellVisualStore.LookupEntry(m_spellInfo->SpellVisual);
+    if (!pSpellVisual || !pSpellVisual->channelKit)
+        return;
+
+    m_channeledVisualKit = pSpellVisual->channelKit;
+    m_channeledVisualTimer = SPELL_CHANNEL_VISUAL_TIMER;
 }
 
 void Spell::SendResurrectRequest(Player* target, bool sickness)
@@ -5993,188 +6181,6 @@ SpellCastResult Spell::CheckCast(bool strict)
             return castResult;
     }
 
-    // Database based targets from spell_target_script
-    if (m_UniqueTargetInfo.empty())                         // skip second CheckCast apply (for delayed spells for example)
-    {
-        for (uint8 j = 0; j < MAX_EFFECT_INDEX; ++j)
-        {
-            if (m_spellInfo->EffectImplicitTargetA[j] == TARGET_UNIT_SCRIPT_NEAR_CASTER ||
-                    (m_spellInfo->EffectImplicitTargetB[j] == TARGET_UNIT_SCRIPT_NEAR_CASTER && m_spellInfo->EffectImplicitTargetA[j] != TARGET_UNIT_CASTER) ||
-                    m_spellInfo->EffectImplicitTargetA[j] == TARGET_LOCATION_SCRIPT_NEAR_CASTER ||
-                    m_spellInfo->EffectImplicitTargetB[j] == TARGET_LOCATION_SCRIPT_NEAR_CASTER ||
-                    m_spellInfo->EffectImplicitTargetA[j] == TARGET_GAMEOBJECT_SCRIPT_NEAR_CASTER)
-            {
-
-                SpellScriptTargetBounds bounds = sSpellMgr.GetSpellScriptTargetBounds(m_spellInfo->Id);
-
-                if (bounds.first == bounds.second)
-                {
-                    if (m_spellInfo->EffectImplicitTargetA[j] == TARGET_UNIT_SCRIPT_NEAR_CASTER || m_spellInfo->EffectImplicitTargetB[j] == TARGET_UNIT_SCRIPT_NEAR_CASTER)
-                        sLog.Out(LOG_DBERROR, LOG_LVL_MINIMAL, "Spell entry %u, effect %i has EffectImplicitTargetA/EffectImplicitTargetB = TARGET_UNIT_SCRIPT_NEAR_CASTER, but creature are not defined in `spell_script_target`", m_spellInfo->Id, j);
-
-                    if (m_spellInfo->EffectImplicitTargetA[j] == TARGET_LOCATION_SCRIPT_NEAR_CASTER || m_spellInfo->EffectImplicitTargetB[j] == TARGET_LOCATION_SCRIPT_NEAR_CASTER)
-                        sLog.Out(LOG_DBERROR, LOG_LVL_MINIMAL, "Spell entry %u, effect %i has EffectImplicitTargetA/EffectImplicitTargetB = TARGET_LOCATION_SCRIPT_NEAR_CASTER, but gameobject or creature are not defined in `spell_script_target`", m_spellInfo->Id, j);
-
-                    if (m_spellInfo->EffectImplicitTargetA[j] == TARGET_GAMEOBJECT_SCRIPT_NEAR_CASTER)
-                        sLog.Out(LOG_DBERROR, LOG_LVL_MINIMAL, "Spell entry %u, effect %i has EffectImplicitTargetA/EffectImplicitTargetB = TARGET_GAMEOBJECT_SCRIPT_NEAR_CASTER, but gameobject are not defined in `spell_script_target`", m_spellInfo->Id, j);
-                }
-
-                SpellRangeEntry const* srange = sSpellRangeStore.LookupEntry(m_spellInfo->rangeIndex);
-                float range = GetSpellMaxRange(srange);
-
-                Creature* targetExplicit = nullptr;            // used for cases where a target is provided (by script for example)
-                Creature* creatureScriptTarget = nullptr;
-                GameObject* goScriptTarget = nullptr;
-
-                for (auto i_spellST = bounds.first; i_spellST != bounds.second; ++i_spellST)
-                {
-                    if (i_spellST->second.CanNotHitWithSpellEffect(SpellEffectIndex(j)))
-                        continue;
-
-                    switch (i_spellST->second.type)
-                    {
-                        case SPELL_TARGET_TYPE_GAMEOBJECT:
-                        {
-                            GameObject* p_GameObject = nullptr;
-
-                            if (i_spellST->second.targetEntry)
-                            {
-                                MaNGOS::NearestGameObjectEntryFitConditionInObjectRangeCheck go_check(*m_caster, i_spellST->second.targetEntry, range, i_spellST->second.conditionId);
-                                MaNGOS::GameObjectLastSearcher<MaNGOS::NearestGameObjectEntryFitConditionInObjectRangeCheck> checker(p_GameObject, go_check);
-                                Cell::VisitGridObjects(m_caster, checker, range);
-
-                                if (p_GameObject)
-                                {
-                                    // remember found target and range, next attempt will find more near target with another entry
-                                    creatureScriptTarget = nullptr;
-                                    goScriptTarget = p_GameObject;
-                                    range = go_check.GetLastRange();
-                                }
-                            }
-                            else if (focusObject)           // Focus Object
-                            {
-                                float frange = m_caster->GetDistance(focusObject);
-                                if (range >= frange)
-                                {
-                                    creatureScriptTarget = nullptr;
-                                    goScriptTarget = focusObject;
-                                    range = frange;
-                                }
-                            }
-                            break;
-                        }
-                        case SPELL_TARGET_TYPE_CREATURE:
-                        case SPELL_TARGET_TYPE_DEAD:
-                        default:
-                        {
-                            Creature* p_Creature = nullptr;
-
-                            // check if explicit target is provided and check it up against database valid target entry/state
-                            if (Unit* pTarget = m_targets.getUnitTarget())
-                            {
-                                if (pTarget->IsCreature() && pTarget->GetEntry() == i_spellST->second.targetEntry)
-                                {
-                                    if (i_spellST->second.type == SPELL_TARGET_TYPE_DEAD && ((Creature*)pTarget)->IsCorpse())
-                                    {
-                                        // always use spellMaxRange, in case GetLastRange returned different in a previous pass
-                                        if (pTarget->IsWithinDistInMap(m_caster, GetSpellMaxRange(srange)))
-                                            targetExplicit = (Creature*)pTarget;
-                                    }
-                                    else if (i_spellST->second.type == SPELL_TARGET_TYPE_CREATURE && pTarget->IsAlive())
-                                    {
-                                        // always use spellMaxRange, in case GetLastRange returned different in a previous pass
-                                        if (pTarget->IsWithinDistInMap(m_caster, GetSpellMaxRange(srange)))
-                                            targetExplicit = (Creature*)pTarget;
-                                    }
-                                }
-                            }
-
-                            // no target provided or it was not valid, so use closest in range
-                            if (!targetExplicit)
-                            {
-                                MaNGOS::NearestCreatureEntryFitConditionInObjectRangeCheck u_check(*m_caster, i_spellST->second.targetEntry, i_spellST->second.type != SPELL_TARGET_TYPE_DEAD, range, i_spellST->second.conditionId);
-                                MaNGOS::CreatureLastSearcher<MaNGOS::NearestCreatureEntryFitConditionInObjectRangeCheck> searcher(p_Creature, u_check);
-
-                                // Visit all, need to find also Pet* objects
-                                Cell::VisitAllObjects(m_caster, searcher, range);
-
-                                range = u_check.GetLastRange();
-                            }
-
-                            // always prefer provided target if it's valid
-                            if (targetExplicit)
-                                creatureScriptTarget = targetExplicit;
-                            else if (p_Creature)
-                                creatureScriptTarget = p_Creature;
-
-                            if (creatureScriptTarget)
-                                goScriptTarget = nullptr;
-
-                            break;
-                        }
-                    }
-                }
-
-                if (creatureScriptTarget)
-                {
-                    // store explicit target for TARGET_UNIT_SCRIPT_NEAR_CASTER
-                    if (m_spellInfo->EffectImplicitTargetA[j] == TARGET_UNIT_SCRIPT_NEAR_CASTER ||
-                        m_spellInfo->EffectImplicitTargetB[j] == TARGET_UNIT_SCRIPT_NEAR_CASTER)
-                    {
-                        // Fixes Toss Fuel on Bonfire (28806) and Dominion of Soul (16053)
-                        if (m_CastItem)
-                            m_targets.setUnitTarget(creatureScriptTarget);
-
-                        AddUnitTarget(creatureScriptTarget, SpellEffectIndex(j));
-                    }
-                    // store coordinates for TARGET_LOCATION_SCRIPT_NEAR_CASTER
-                    else if (m_spellInfo->EffectImplicitTargetA[j] == TARGET_LOCATION_SCRIPT_NEAR_CASTER ||
-                             m_spellInfo->EffectImplicitTargetB[j] == TARGET_LOCATION_SCRIPT_NEAR_CASTER)
-                    {
-                        m_targets.setDestination(creatureScriptTarget->GetPositionX(), creatureScriptTarget->GetPositionY(), creatureScriptTarget->GetPositionZ());
-
-                        if (m_spellInfo->EffectImplicitTargetA[j] == TARGET_LOCATION_SCRIPT_NEAR_CASTER && m_spellInfo->Effect[j] != SPELL_EFFECT_PERSISTENT_AREA_AURA)
-                            AddUnitTarget(creatureScriptTarget, SpellEffectIndex(j));
-                    }
-                }
-                else if (goScriptTarget)
-                {
-                    // store coordinates for TARGET_LOCATION_SCRIPT_NEAR_CASTER
-                    if (m_spellInfo->EffectImplicitTargetA[j] == TARGET_LOCATION_SCRIPT_NEAR_CASTER ||
-                            m_spellInfo->EffectImplicitTargetB[j] == TARGET_LOCATION_SCRIPT_NEAR_CASTER)
-                    {
-                        m_targets.setDestination(goScriptTarget->GetPositionX(), goScriptTarget->GetPositionY(), goScriptTarget->GetPositionZ());
-
-                        if (m_spellInfo->EffectImplicitTargetA[j] == TARGET_LOCATION_SCRIPT_NEAR_CASTER && m_spellInfo->Effect[j] != SPELL_EFFECT_PERSISTENT_AREA_AURA)
-                            AddGOTarget(goScriptTarget, SpellEffectIndex(j));
-                    }
-                    // store explicit target for TARGET_GAMEOBJECT_SCRIPT_NEAR_CASTER
-                    else
-                    {
-                        if (m_spellInfo->EffectImplicitTargetA[j] == TARGET_GAMEOBJECT_SCRIPT_NEAR_CASTER ||
-                                m_spellInfo->EffectImplicitTargetB[j] == TARGET_GAMEOBJECT_SCRIPT_NEAR_CASTER)
-                            AddGOTarget(goScriptTarget, SpellEffectIndex(j));
-                    }
-                }
-                //Missing DB Entry or targets for this spellEffect.
-                else
-                {
-                    /* For TARGET_GAMEOBJECT_SCRIPT_NEAR_CASTER makes DB targets optional not required for now
-                     * TODO: Makes more research for this target type
-                     */
-                    if (m_spellInfo->EffectImplicitTargetA[j] != TARGET_GAMEOBJECT_SCRIPT_NEAR_CASTER)
-                    {
-                        // not report target not existence for triggered spells
-                        if (m_triggeredByAuraSpell || m_IsTriggeredSpell)
-                            return SPELL_FAILED_DONT_REPORT;
-                        else
-                            return SPELL_FAILED_BAD_TARGETS;
-                    }
-                }
-            }
-        }
-    }
-
     if (!m_IsTriggeredSpell)
     {
         if (!m_triggeredByAuraSpell)
@@ -6450,11 +6456,11 @@ SpellCastResult Spell::CheckCast(bool strict)
                 if (strict)
                 {
                     SpellRangeEntry const* spellRange = sSpellRangeStore.LookupEntry(m_spellInfo->rangeIndex);
-                    Unit* unitTarget = m_targets.getUnitTarget();
-                    if (unitTarget && spellRange && spellRange->maxRange > 0.0f)
+                    Unit* pUnitTarget = m_targets.getUnitTarget();
+                    if (pUnitTarget && spellRange && spellRange->maxRange > 0.0f)
                     {
                         float x, y, z;
-                        unitTarget->GetPosition(x, y, z);
+                        pUnitTarget->GetPosition(x, y, z);
 
                         if (!m_casterUnit->IsInWater())
                         {
