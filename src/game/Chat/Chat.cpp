@@ -123,6 +123,7 @@ ChatCommand * ChatHandler::getCommandTable()
     {
         { "add",          SEC_PLAYER,    true, nullptr,            "Add a new bot", battleBotAddCommandTable },
         { "remove",       SEC_PLAYER,    false, &ChatHandler::HandleBattleBotRemoveCommand,       "", nullptr },
+        { "removeall",    SEC_PLAYER,    true,  &ChatHandler::HandleBattleBotRemoveAllCommand,    "", nullptr },
         { "showpath",     SEC_PLAYER,    false, &ChatHandler::HandleBattleBotShowPathCommand,     "", nullptr },
         { "showallpaths", SEC_PLAYER,    false, &ChatHandler::HandleBattleBotShowAllPathsCommand, "", nullptr },
         { nullptr,        0,                    false, nullptr,                                          "", nullptr },
