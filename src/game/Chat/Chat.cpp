@@ -564,7 +564,7 @@ ChatCommand * ChatHandler::getCommandTable()
         { "spell",          SEC_TICKETMASTER, true,  &ChatHandler::HandleLookupSpellCommand,         "", nullptr },
         { "sound",          SEC_TICKETMASTER, true,  &ChatHandler::HandleLookupSoundCommand,         "", nullptr },
         { "taxinode",       SEC_TICKETMASTER, true,  &ChatHandler::HandleLookupTaxiNodeCommand,      "", nullptr },
-        { "tele",           SEC_TICKETMASTER, true,  &ChatHandler::HandleLookupTeleCommand,          "", nullptr },
+        { "tele",           SEC_PLAYER,       true,  &ChatHandler::HandleLookupTeleCommand,          "", nullptr },
         { "guild",          SEC_MODERATOR,    true,  &ChatHandler::HandleLookupGuildCommand,         "", nullptr },
         { nullptr,          0,                false, nullptr,                                        "", nullptr }
     };
@@ -991,11 +991,11 @@ ChatCommand * ChatHandler::getCommandTable()
 
     static ChatCommand teleCommandTable[] =
     {
-        { "add",            SEC_DEVELOPER,      false, &ChatHandler::HandleTeleAddCommand,             "", nullptr },
-        { "del",            SEC_DEVELOPER,      true,  &ChatHandler::HandleTeleDelCommand,             "", nullptr },
-        { "name",           SEC_TICKETMASTER,   true,  &ChatHandler::HandleTeleNameCommand,            "", nullptr },
-        { "group",          SEC_TICKETMASTER,   false, &ChatHandler::HandleTeleGroupCommand,           "", nullptr },
-        { "",               SEC_TICKETMASTER,   false, &ChatHandler::HandleTeleCommand,                "", nullptr },
+        { "add",            SEC_PLAYER,         false, &ChatHandler::HandleTeleAddCommand,             "", nullptr },
+        { "del",            SEC_PLAYER,         true,  &ChatHandler::HandleTeleDelCommand,             "", nullptr },
+        { "name",           SEC_PLAYER,         true,  &ChatHandler::HandleTeleNameCommand,            "", nullptr },
+        { "group",          SEC_PLAYER,         false, &ChatHandler::HandleTeleGroupCommand,           "", nullptr },
+        { "",               SEC_PLAYER,         false, &ChatHandler::HandleTeleCommand,                "", nullptr },
         { nullptr,          0,                  false, nullptr,                                        "", nullptr }
     };
 
@@ -1202,7 +1202,7 @@ ChatCommand * ChatHandler::getCommandTable()
         { "reload",         SEC_DEVELOPER,      true, nullptr,                                         "", reloadCommandTable   },
         { "reset",          SEC_GAMEMASTER,     true, nullptr,                                         "", resetCommandTable    },
         { "server",         SEC_PLAYER,         true, nullptr,                                         "", serverCommandTable   },
-        { "tele",           SEC_TICKETMASTER,   true, nullptr,                                         "", teleCommandTable     },
+        { "tele",           SEC_PLAYER,         true, nullptr,                                         "", teleCommandTable     },
         { "trigger",        SEC_TICKETMASTER,   false, nullptr,                                        "", triggerCommandTable  },
         { "wp",             SEC_TICKETMASTER,   false, nullptr,                                        "", wpCommandTable       },
         { "service",        SEC_ADMINISTRATOR,  true, nullptr,                                         "", serviceCommandTable  },
