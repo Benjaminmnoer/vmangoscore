@@ -12,6 +12,7 @@ RUN apt-get update && apt-get install -y \
   libssl-dev \
   libtbb-dev \
   zlib1g-dev \
+  libreadline-dev \
   && rm -rf /var/lib/apt/lists/*
 
 ENV ACE_ROOT=/usr/include/ace
