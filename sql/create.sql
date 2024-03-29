@@ -1,0 +1,14 @@
+CREATE USER 'vmangos'@'%' IDENTIFIED BY 'Long@ndComp!exPa$$word!!' WITH MAX_QUERIES_PER_HOUR 0 MAX_CONNECTIONS_PER_HOUR 0 MAX_UPDATES_PER_HOUR 0;
+
+CREATE DATABASE `characters` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE DATABASE `logon` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE DATABASE `logs` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE DATABASE `world` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+GRANT ALL PRIVILEGES ON `characters` . * TO 'vmangos'@'%' WITH GRANT OPTION;
+GRANT ALL PRIVILEGES ON `logon` . * TO 'vmangos'@'%' WITH GRANT OPTION;
+GRANT ALL PRIVILEGES ON `logs` . * TO 'vmangos'@'%' WITH GRANT OPTION;
+GRANT ALL PRIVILEGES ON `world` . * TO 'vmangos'@'%' WITH GRANT OPTION;
+
+
+ALTER USER 'vmangos'@'%' IDENTIFIED WITH mysql_native_password BY 'Long@ndComp!exPa$$word!!';
