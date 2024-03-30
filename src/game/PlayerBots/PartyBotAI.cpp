@@ -38,8 +38,15 @@ enum PartyBotSpells
 };
 
 #define PB_UPDATE_INTERVAL 1000
-#define PB_MIN_FOLLOW_DIST 3.0f
-#define PB_MAX_FOLLOW_DIST 6.0f
+
+// Melee follow distance
+#define PB_MELEE_MIN_FOLLOW_DIST 3.0f
+#define PB_MELEE_MAX_FOLLOW_DIST 6.0f
+
+// Range follow distance
+#define PB_RANGE_MIN_FOLLOW_DIST 15.0f
+#define PB_RANGE_MAX_FOLLOW_DIST 20.0f
+
 #define PB_MIN_FOLLOW_ANGLE 0.0f
 #define PB_MAX_FOLLOW_ANGLE 6.0f
 
@@ -853,8 +860,14 @@ void PartyBotAI::UpdateAI(uint32 const diff)
     {
         if (!pVictim)
         {
-            if (me->GetMotionMaster()->GetCurrentMovementGeneratorType() != FOLLOW_MOTION_TYPE)
-                me->GetMotionMaster()->MoveFollow(pLeader, urand(PB_MIN_FOLLOW_DIST, PB_MAX_FOLLOW_DIST), frand(PB_MIN_FOLLOW_ANGLE, PB_MAX_FOLLOW_ANGLE));
+            if (me->GetMotionMaster()->GetCurrentMovementGeneratorType() != FOLLOW_MOTION_TYPE) {
+                if (GetRole() == ROLE_HEALER || GetRole() == ROLE_RANGE_DPS) {
+                    me->GetMotionMaster()->MoveFollow(pLeader, urand(PB_RANGE_MIN_FOLLOW_DIST, PB_RANGE_MAX_FOLLOW_DIST), frand(PB_MIN_FOLLOW_ANGLE, PB_MAX_FOLLOW_ANGLE));
+                }
+                else {
+                    me->GetMotionMaster()->MoveFollow(pLeader, urand(PB_MELEE_MIN_FOLLOW_DIST, PB_MELEE_MAX_FOLLOW_DIST), frand(PB_MIN_FOLLOW_ANGLE, PB_MAX_FOLLOW_ANGLE));
+                }
+            }
         }
         else
         {
@@ -867,9 +880,13 @@ void PartyBotAI::UpdateAI(uint32 const diff)
             switch (me->GetMotionMaster()->GetCurrentMovementGeneratorType())
             {
                 case IDLE_MOTION_TYPE:
-                case FOLLOW_MOTION_TYPE:
+                case FOLLOW_MOTION_TYPE: {
+                    if (GetRole() == ROLE_HEALER || GetRole() == ROLE_RANGE_DPS) {
+                        me->GetMotionMaster()->MoveChase(pVictim, urand(PB_RANGE_MIN_FOLLOW_DIST, PB_RANGE_MAX_FOLLOW_DIST), frand(PB_MIN_FOLLOW_ANGLE, PB_MAX_FOLLOW_ANGLE));
+                    }
                     me->GetMotionMaster()->MoveChase(pVictim);
                     break;
+                }
             }
         }
     }
