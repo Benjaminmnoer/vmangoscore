@@ -96,4 +96,12 @@ class PopulateAreaBotAI: public PlayerBotAI
         float _radius;
         uint32 _team;
 };
+
+class PlayerBotBaseAI : public PlayerBotAI
+{
+    public:
+        explicit PlayerBotBaseAI(Player* pPlayer = nullptr) : PlayerBotAI(pPlayer) {}
+        bool OnSessionLoaded(PlayerBotEntry* entry, WorldSession* sess) override;
+        void UpdateAI(uint32 const) override;
+};
 #endif

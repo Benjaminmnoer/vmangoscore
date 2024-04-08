@@ -27,6 +27,7 @@
 
 bool PlayerBotAI::OnSessionLoaded(PlayerBotEntry* entry, WorldSession* sess)
 {
+    sLog.Out(LOG_BASIC, LOG_LVL_MINIMAL, "Bot logging in");
     sess->LoginPlayer(entry->playerGUID);
     return true;
 }
@@ -132,6 +133,7 @@ bool PlayerBotAI::SpawnNewPlayer(WorldSession* sess, uint8 class_, uint32 race_,
     newChar->UpdateAllStats();
     return true;
 }
+
 bool MageOrgrimmarAttackerAI::OnSessionLoaded(PlayerBotEntry* entry, WorldSession* sess)
 {
     return SpawnNewPlayer(sess, CLASS_MAGE, RACE_GNOME, 1, 0, 1017.0f, -4450, 12, 0.65f);
@@ -340,6 +342,26 @@ void PopulateAreaBotAI::OnPlayerLogin()
         me->GetMotionMaster()->MoveConfused();
 }
 
+void PlayerBotBaseAI::UpdateAI(uint32 const diff)
+{
+    PlayerBotAI::UpdateAI(diff);
+
+    if (me->IsInCombat())
+    {
+
+    }
+}
+
+bool PlayerBotBaseAI::OnSessionLoaded(PlayerBotEntry* entry, WorldSession* sess)
+{
+    //Player* player = sess->GetPlayer();
+    sLog.Out(LOG_BASIC, LOG_LVL_ERROR, "Base called");
+
+    //return SpawnNewPlayer(sess, player->GetClass(), player->GetRace(), player->GetMapId(), player->GetInstanceId(), player->GetPositionX(), player->GetPositionY(), player->GetPositionZ(), player->GetOrientation());
+    sess->LoginPlayer(entry->playerGUID);
+    return true;
+}
+
 PlayerBotAI* CreatePlayerBotAI(std::string ainame)
 {
     if (ainame == "MageOrgrimmarAttackerAI")
@@ -352,5 +374,5 @@ PlayerBotAI* CreatePlayerBotAI(std::string ainame)
         return new PopulateAreaBotAI(1, 1568, -4405.87f, 8.13f, HORDE, 150.0f);
     if (ainame == "PlayerBotFleeingAI")
         return new PlayerBotFleeingAI();
-    return new PlayerBotAI();
+    return new PlayerBotBaseAI();
 }

@@ -192,7 +192,7 @@ set (game_SRCS
     PlayerBots/CombatBotBaseAI.cpp
     PlayerBots/BattleBotAI.cpp
     PlayerBots/BattleBotWaypoints.cpp
-    PlayerBots/PlayerBotAI.cpp
+	  PlayerBots/PlayerBotAI.cpp
     PlayerBots/PlayerBotMgr.cpp
     Protocol/Opcodes.cpp
     Protocol/WorldSocket.cpp
