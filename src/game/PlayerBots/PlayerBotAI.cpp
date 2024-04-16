@@ -345,10 +345,36 @@ void PopulateAreaBotAI::OnPlayerLogin()
 void PlayerBotBaseAI::UpdateAI(uint32 const diff)
 {
     PlayerBotAI::UpdateAI(diff);
-
-    if (me->IsInCombat())
+    
+    /*Unit* nearestFriendly = me->SelectRandomFriendlyTarget(nullptr, 50.0f);
+    if (nearestFriendly->IsPlayer()) 
     {
+        me->Say("Hello, friend!", 7);
+    }*/
+    if (me->IsInCombat())
+        return;
 
+    if (me->GetHealthPercent() < 40.f)
+        return;
+
+    if (me->IsMoving())
+        return;
+
+    Unit* nearestTarget = me->SelectRandomUnfriendlyTarget(nullptr, 50.0f, false, true);
+    if (!nearestTarget)
+    {
+        if (!me->IsMoving()) 
+        {
+            me->GetMotionMaster()->MovePoint(0, 48.965195, 45.775532, 79.698853);
+        }
+        return;
+    }
+
+    me->GetMotionMaster()->MoveFollow(nearestTarget, 5.0f, 0);
+
+    if (me->IsInRange(nearestTarget, 0.0f, 10.0f))
+    {
+        me->Attack(nearestTarget, true);
     }
 }
 
