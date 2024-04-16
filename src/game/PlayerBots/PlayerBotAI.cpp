@@ -14,6 +14,7 @@
 * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 */
 
+#include <string>
 #include "PlayerBotMgr.h"
 #include "PlayerBotAI.h"
 #include "Player.h"
@@ -351,6 +352,23 @@ void PlayerBotBaseAI::UpdateAI(uint32 const diff)
     {
         me->Say("Hello, friend!", 7);
     }*/
+
+    debugTimer += diff;
+    if (debugTimer >= 10000)
+    {
+        me->Say("Debug output", 7);
+        me->Say("Current diff: " + diff, 7);
+        me->Say("Current level: " + me->GetLevel(), 7);
+        me->Say("Is moving: " + me->IsMoving(), 7);
+        if (currentTarget != nullptr) {
+            std::ostringstream output;
+            output << "Current target: ";
+            output << currentTarget->GetName();
+            me->Say(output.str().c_str(), 7);
+        }
+        debugTimer = 0;
+    }
+
     if (me->IsInCombat())
         return;
 
@@ -359,29 +377,33 @@ void PlayerBotBaseAI::UpdateAI(uint32 const diff)
 
     if (me->IsMoving())
         return;
-
+    
     Unit* nearestTarget = me->SelectRandomUnfriendlyTarget(nullptr, 50.0f, false, true);
     if (!nearestTarget)
     {
         if (!me->IsMoving()) 
         {
-            me->GetMotionMaster()->MovePoint(0, 48.965195, 45.775532, 79.698853);
+            if (me->GetLevel() <= 2) 
+                me->GetMotionMaster()->MovePoint(0, -8848.377930f, -109.537949f, 80.913269f, 1);
+            if (me->GetLevel() <= 4)
+                me->GetMotionMaster()->MovePoint(0, -8691.196289f, -113.499397f, 89.039215f, 1);
+            //me->GetMotionMaster()->Move
         }
         return;
     }
 
-    me->GetMotionMaster()->MoveFollow(nearestTarget, 5.0f, 0);
-
-    if (me->IsInRange(nearestTarget, 0.0f, 10.0f))
+    currentTarget = nearestTarget;
+    me->GetMotionMaster()->MoveChase(currentTarget, 5.0f, 0);
+    if (me->IsInRange(currentTarget, 0.0f, 10.0f))
     {
-        me->Attack(nearestTarget, true);
+        me->Attack(currentTarget, true);
     }
 }
 
 bool PlayerBotBaseAI::OnSessionLoaded(PlayerBotEntry* entry, WorldSession* sess)
 {
     //Player* player = sess->GetPlayer();
-    sLog.Out(LOG_BASIC, LOG_LVL_ERROR, "Base called");
+    sLog.Out(LOG_BASIC, LOG_LVL_MINIMAL, "Base called");
 
     //return SpawnNewPlayer(sess, player->GetClass(), player->GetRace(), player->GetMapId(), player->GetInstanceId(), player->GetPositionX(), player->GetPositionY(), player->GetPositionZ(), player->GetOrientation());
     sess->LoginPlayer(entry->playerGUID);
