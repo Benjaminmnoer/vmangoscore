@@ -1,18 +1,18 @@
 /*
-* This program is free software; you can redistribute it and/or modify
-* it under the terms of the GNU General Public License as published by
-* the Free Software Foundation; either version 2 of the License, or
-* (at your option) any later version.
-*
-* This program is distributed in the hope that it will be useful,
-* but WITHOUT ANY WARRANTY; without even the implied warranty of
-* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-* GNU General Public License for more details.
-*
-* You should have received a copy of the GNU General Public License
-* along with this program; if not, write to the Free Software
-* Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
-*/
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ */
 
 #include <string>
 #include "PlayerBotMgr.h"
@@ -26,9 +26,9 @@
 #include "Opcodes.h"
 #include "WorldPacket.h"
 
-bool PlayerBotAI::OnSessionLoaded(PlayerBotEntry* entry, WorldSession* sess)
+bool PlayerBotAI::OnSessionLoaded(PlayerBotEntry *entry, WorldSession *sess)
 {
-    sLog.Out(LOG_BASIC, LOG_LVL_MINIMAL, "Bot logging in");
+    // sLog.Out(LOG_BASIC, LOG_LVL_MINIMAL, "Bot logging in");
     sess->LoginPlayer(entry->playerGUID);
     return true;
 }
@@ -74,8 +74,7 @@ enum
     AURA_REGEN_MANA = 430,
 };
 
-
-bool PlayerBotAI::SpawnNewPlayer(WorldSession* sess, uint8 class_, uint32 race_, uint32 mapId, uint32 instanceId, float x, float y, float z, float o, Player* pClone)
+bool PlayerBotAI::SpawnNewPlayer(WorldSession *sess, uint8 class_, uint32 race_, uint32 mapId, uint32 instanceId, float x, float y, float z, float o, Player *pClone)
 {
     ASSERT(botEntry);
     std::string name = sObjectMgr.GeneratePetName(1863); // Succubus name
@@ -86,7 +85,7 @@ bool PlayerBotAI::SpawnNewPlayer(WorldSession* sess, uint8 class_, uint32 race_,
     uint8 hairStyle = pClone ? pClone->GetByteValue(PLAYER_BYTES, PLAYER_BYTES_OFFSET_HAIR_STYLE_ID) : urand(0, 5);
     uint8 hairColor = pClone ? pClone->GetByteValue(PLAYER_BYTES, PLAYER_BYTES_OFFSET_HAIR_COLOR_ID) : urand(0, 5);
     uint8 facialHair = pClone ? pClone->GetByteValue(PLAYER_BYTES_2, PLAYER_BYTES_2_OFFSET_FACIAL_STYLE) : urand(0, 5);
-    Player* newChar = new Player(sess);
+    Player *newChar = new Player(sess);
     uint32 guid = botEntry->playerGUID;
     if (!newChar->Create(guid, name, race_, class_, gender, skin, face, hairStyle, hairColor, facialHair))
     {
@@ -101,12 +100,12 @@ bool PlayerBotAI::SpawnNewPlayer(WorldSession* sess, uint8 class_, uint32 race_,
     // Set instance
     if (instanceId && mapId > 1) // Not a continent
     {
-        DungeonPersistentState* state = (DungeonPersistentState*)sMapPersistentStateMgr
-                .AddPersistentState(sMapStorage.LookupEntry<MapEntry>(mapId), instanceId, time(nullptr) + 3600, false, true);
+        DungeonPersistentState *state = (DungeonPersistentState *)sMapPersistentStateMgr
+                                            .AddPersistentState(sMapStorage.LookupEntry<MapEntry>(mapId), instanceId, time(nullptr) + 3600, false, true);
         newChar->BindToInstance(state, true, true);
     }
     // Generate position
-    Map* map = sMapMgr.FindMap(mapId, instanceId);
+    Map *map = sMapMgr.FindMap(mapId, instanceId);
     if (!map)
     {
         sLog.Out(LOG_BASIC, LOG_LVL_ERROR, "PlayerBotAI::SpawnNewPlayer: Map (%u, %u) not found!", mapId, instanceId);
@@ -118,7 +117,7 @@ bool PlayerBotAI::SpawnNewPlayer(WorldSession* sess, uint8 class_, uint32 race_,
     newChar->SetMap(map);
     newChar->SaveRecallPosition();
     newChar->CreatePacketBroadcaster();
-    MasterPlayer* mPlayer = new MasterPlayer(sess);
+    MasterPlayer *mPlayer = new MasterPlayer(sess);
     mPlayer->LoadPlayer(newChar);
     mPlayer->SetSocial(sSocialMgr.LoadFromDB(nullptr, newChar->GetObjectGuid()));
     if (!newChar->GetMap()->Add(newChar))
@@ -135,7 +134,7 @@ bool PlayerBotAI::SpawnNewPlayer(WorldSession* sess, uint8 class_, uint32 race_,
     return true;
 }
 
-bool MageOrgrimmarAttackerAI::OnSessionLoaded(PlayerBotEntry* entry, WorldSession* sess)
+bool MageOrgrimmarAttackerAI::OnSessionLoaded(PlayerBotEntry *entry, WorldSession *sess)
 {
     return SpawnNewPlayer(sess, CLASS_MAGE, RACE_GNOME, 1, 0, 1017.0f, -4450, 12, 0.65f);
 }
@@ -169,7 +168,7 @@ void MageOrgrimmarAttackerAI::UpdateAI(uint32 const diff)
     if (me->IsNonMeleeSpellCasted(false) || (me->HasAura(AURA_REGEN_MANA) && me->GetPower(POWER_MANA) != me->GetMaxPower(POWER_MANA)))
         return;
     float range = me->IsInCombat() ? 30.0f : frand(15, 30);
-    Unit* target = me->SelectNearestTarget(range);
+    Unit *target = me->SelectNearestTarget(range);
     if (target && !me->IsWithinLOSInMap(target))
         target = nullptr;
     // OOM ?
@@ -247,18 +246,18 @@ void MageOrgrimmarAttackerAI::UpdateAI(uint32 const diff)
         {
             switch (urand(0, 2))
             {
-                case 0:
-                    x = 1357;
-                    y = -4376;
-                    break;
-                case 1:
-                    x = 1354;
-                    y = -4412;
-                    break;
-                case 2:
-                    x = 1346;
-                    y = -4339;
-                    break;
+            case 0:
+                x = 1357;
+                y = -4376;
+                break;
+            case 1:
+                x = 1354;
+                y = -4412;
+                break;
+            case 2:
+                x = 1346;
+                y = -4339;
+                break;
             }
         }
         else if (me->GetPositionX() + 10 < 1421.0f)
@@ -273,24 +272,24 @@ void MageOrgrimmarAttackerAI::UpdateAI(uint32 const diff)
         {
             switch (urand(0, 2))
             {
-                case 0:
-                    x = 1516;
-                    y = -4410;
-                    z = 17.0f;
-                    r = 4;
-                    break;
-                case 1:
-                    x = 1538;
-                    y = -4347;
-                    z = 18;
-                    r = 3;
-                    break;
-                case 2:
-                    x = 1617;
-                    y = -4426;
-                    z = 12;
-                    r = 4;
-                    break;
+            case 0:
+                x = 1516;
+                y = -4410;
+                z = 17.0f;
+                r = 4;
+                break;
+            case 1:
+                x = 1538;
+                y = -4347;
+                z = 18;
+                r = 3;
+                break;
+            case 2:
+                x = 1617;
+                y = -4426;
+                z = 12;
+                r = 4;
+                break;
             }
         }
         if (!z)
@@ -321,7 +320,7 @@ void MageOrgrimmarAttackerAI::UpdateAI(uint32 const diff)
     me->GetMotionMaster()->MovePoint(0, x, y, z, MOVE_PATHFINDING);
 }
 
-void PopulateAreaBotAI::BeforeAddToMap(Player* player)
+void PopulateAreaBotAI::BeforeAddToMap(Player *player)
 {
     if (player->GetInstanceId() || player->GetTeam() != _team)
         return;
@@ -330,8 +329,9 @@ void PopulateAreaBotAI::BeforeAddToMap(Player* player)
         float x = _x;
         float y = _y;
         float z = _z;
-        Map* map = sMapMgr.CreateMap(_map, player);
-        while (!map->GetWalkRandomPosition(nullptr, x, y, z, _radius));
+        Map *map = sMapMgr.CreateMap(_map, player);
+        while (!map->GetWalkRandomPosition(nullptr, x, y, z, _radius))
+            ;
         player->Relocate(x, y, z);
         player->SetLocationMapId(_map);
     }
@@ -346,71 +346,94 @@ void PopulateAreaBotAI::OnPlayerLogin()
 void PlayerBotBaseAI::UpdateAI(uint32 const diff)
 {
     PlayerBotAI::UpdateAI(diff);
-    
+
     /*Unit* nearestFriendly = me->SelectRandomFriendlyTarget(nullptr, 50.0f);
-    if (nearestFriendly->IsPlayer()) 
+    if (nearestFriendly->IsPlayer())
     {
         me->Say("Hello, friend!", 7);
     }*/
 
+    if (!initialized)
+    {
+        me->GetMotionMaster()->MovePoint(0, -8848.377930f, -109.537949f, 80.913269f, 1);
+        initialized = true;
+    }
+
     debugTimer += diff;
     if (debugTimer >= 10000)
     {
-        me->Say("Debug output", 7);
-        me->Say("Current diff: " + diff, 7);
-        me->Say("Current level: " + me->GetLevel(), 7);
-        me->Say("Is moving: " + me->IsMoving(), 7);
-        if (currentTarget != nullptr) {
-            std::ostringstream output;
-            output << "Current target: ";
-            output << currentTarget->GetName();
-            me->Say(output.str().c_str(), 7);
-        }
+        sLog.Out(LOG_BASIC, LOG_LVL_MINIMAL, "Debug output");
+        sLog.Out(LOG_BASIC, LOG_LVL_MINIMAL, "Current diff: %u", diff);
+        sLog.Out(LOG_BASIC, LOG_LVL_MINIMAL, "Current level: %u", me->GetLevel());
+        sLog.Out(LOG_BASIC, LOG_LVL_MINIMAL, "Current health percent: %f", me->GetHealthPercent());
+        sLog.Out(LOG_BASIC, LOG_LVL_MINIMAL, "Current X: %f", me->GetPositionX());
+        sLog.Out(LOG_BASIC, LOG_LVL_MINIMAL, "Current Y: %f", me->GetPositionY());
+        sLog.Out(LOG_BASIC, LOG_LVL_MINIMAL, "Current Z: %f", me->GetPositionZ());
+        sLog.Out(LOG_BASIC, LOG_LVL_MINIMAL, "Current O: %f", me->GetOrientation());
+        sLog.Out(LOG_BASIC, LOG_LVL_MINIMAL, "Is moving: %s", me->IsMoving() ? "true" : "false");
+        sLog.Out(LOG_BASIC, LOG_LVL_MINIMAL, "In combat: %s", me->IsInCombat() ? "true" : "false");
+        sLog.Out(LOG_BASIC, LOG_LVL_MINIMAL, "Current target: %s", currentTarget ? currentTarget->GetName() : "null");
         debugTimer = 0;
     }
 
     if (me->IsInCombat())
         return;
 
-    if (me->GetHealthPercent() < 40.f)
-        return;
+    if (currentTarget && currentTarget->IsDead())
+    {
+        currentTarget = nullptr;
+    }
 
+    // Already performing an action
     if (me->IsMoving())
         return;
-    
-    Unit* nearestTarget = me->SelectRandomUnfriendlyTarget(nullptr, 50.0f, false, true);
-    if (!nearestTarget)
+
+    if (!currentTarget)
     {
-        if (!me->IsMoving()) 
+        sLog.Out(LOG_BASIC, LOG_LVL_MINIMAL, "Finding target");
+        Unit *nearestTarget = me->SelectRandomUnfriendlyTarget(nullptr, 50.0f, false, true);
+        if (!nearestTarget)
         {
-            if (me->GetLevel() <= 2) 
+            uint32 lvl = me->GetLevel();
+            if (lvl <= 2)
+            {
                 me->GetMotionMaster()->MovePoint(0, -8848.377930f, -109.537949f, 80.913269f, 1);
-            if (me->GetLevel() <= 4)
+            }
+            if (lvl > 2 && lvl <= 5)
+            {
                 me->GetMotionMaster()->MovePoint(0, -8691.196289f, -113.499397f, 89.039215f, 1);
-            //me->GetMotionMaster()->Move
+            }
+            return;
         }
+
+        currentTarget = nearestTarget;
+    }
+
+    if (me->GetHealthPercent() < 40.0f)
+    {
         return;
     }
 
-    currentTarget = nearestTarget;
+    me->GetMotionMaster()->Clear();
     me->GetMotionMaster()->MoveChase(currentTarget, 5.0f, 0);
     if (me->IsInRange(currentTarget, 0.0f, 10.0f))
     {
+        sLog.Out(LOG_BASIC, LOG_LVL_MINIMAL, "Attack!");
         me->Attack(currentTarget, true);
     }
 }
 
-bool PlayerBotBaseAI::OnSessionLoaded(PlayerBotEntry* entry, WorldSession* sess)
+bool PlayerBotBaseAI::OnSessionLoaded(PlayerBotEntry *entry, WorldSession *sess)
 {
-    //Player* player = sess->GetPlayer();
+    // Player* player = sess->GetPlayer();
     sLog.Out(LOG_BASIC, LOG_LVL_MINIMAL, "Base called");
 
-    //return SpawnNewPlayer(sess, player->GetClass(), player->GetRace(), player->GetMapId(), player->GetInstanceId(), player->GetPositionX(), player->GetPositionY(), player->GetPositionZ(), player->GetOrientation());
+    // return SpawnNewPlayer(sess, player->GetClass(), player->GetRace(), player->GetMapId(), player->GetInstanceId(), player->GetPositionX(), player->GetPositionY(), player->GetPositionZ(), player->GetOrientation());
     sess->LoginPlayer(entry->playerGUID);
     return true;
 }
 
-PlayerBotAI* CreatePlayerBotAI(std::string ainame)
+PlayerBotAI *CreatePlayerBotAI(std::string ainame)
 {
     if (ainame == "MageOrgrimmarAttackerAI")
         return new MageOrgrimmarAttackerAI();

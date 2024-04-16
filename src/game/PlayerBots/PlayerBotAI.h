@@ -107,11 +107,13 @@ class PlayerBotBaseAI : public PlayerBotAI
         {
             currentTarget = nullptr;
             debugTimer = 0;
+            initialized = false;
         }
         bool OnSessionLoaded(PlayerBotEntry* entry, WorldSession* sess) override;
         void UpdateAI(uint32 const) override;
     private:
         Unit* currentTarget;
         uint16 debugTimer;
+        bool initialized;
 };
 #endif
