@@ -192,8 +192,12 @@ set (game_SRCS
     PlayerBots/CombatBotBaseAI.cpp
     PlayerBots/BattleBotAI.cpp
     PlayerBots/BattleBotWaypoints.cpp
-	  PlayerBots/PlayerBotAI.cpp
+	PlayerBots/PlayerBotAI.cpp
     PlayerBots/PlayerBotMgr.cpp
+	PlayerBots/PlayerBotGoal.cpp
+	PlayerBots/PlayerBotState.cpp
+	PlayerBots/PlayerBotAction.cpp
+	PlayerBots/PlayerBotPlanner.cpp
     Protocol/Opcodes.cpp
     Protocol/WorldSocket.cpp
     Protocol/WorldSocketMgr.cpp
@@ -392,6 +396,10 @@ set (game_SRCS
     PlayerBots/BattleBotWaypoints.h
     PlayerBots/PlayerBotAI.h
     PlayerBots/PlayerBotMgr.h
+	PlayerBots/PlayerBotGoal.h
+	PlayerBots/PlayerBotState.h
+	PlayerBots/PlayerBotAction.h
+	PlayerBots/PlayerBotPlanner.h
     Protocol/Opcodes.h
     Protocol/WorldSocket.h
     Protocol/WorldSocketMgr.h

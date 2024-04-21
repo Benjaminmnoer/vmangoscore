@@ -352,10 +352,11 @@ void PlayerBotBaseAI::UpdateAI(uint32 const diff)
     {
         me->Say("Hello, friend!", 7);
     }*/
-
+    
     if (!initialized)
     {
-        me->GetMotionMaster()->MovePoint(0, -8848.377930f, -109.537949f, 80.913269f, 1);
+        me->GetMotionMaster()->MovePoint(0, -8933.540039f, -136.522995f, 83.446602f, 1);
+        me->SetOrientation(1.972220f);
         initialized = true;
     }
 
@@ -409,13 +410,15 @@ void PlayerBotBaseAI::UpdateAI(uint32 const diff)
         currentTarget = nearestTarget;
     }
 
+
     if (me->GetHealthPercent() < 40.0f)
     {
         return;
     }
 
-    me->GetMotionMaster()->Clear();
-    me->GetMotionMaster()->MoveChase(currentTarget, 5.0f, 0);
+    //me->GetMotionMaster()->Clear();
+    sLog.Out(LOG_BASIC, LOG_LVL_MINIMAL, "Chasing currentTarget: %s", currentTarget ? currentTarget->GetName() : "null");
+    me->GetMotionMaster()->MoveFollow(currentTarget, 1.0f, 0.0f);
     if (me->IsInRange(currentTarget, 0.0f, 10.0f))
     {
         sLog.Out(LOG_BASIC, LOG_LVL_MINIMAL, "Attack!");

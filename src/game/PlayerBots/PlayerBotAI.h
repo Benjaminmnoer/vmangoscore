@@ -17,9 +17,6 @@
 #ifndef MANGOS_PLAYERBOTAI_H
 #define MANGOS_PLAYERBOTAI_H
 
-#include <format>
-#include <iostream>
-
 #include "PlayerAI.h"
 #include "WorldSession.h"
 
@@ -108,12 +105,16 @@ class PlayerBotBaseAI : public PlayerBotAI
             currentTarget = nullptr;
             debugTimer = 0;
             initialized = false;
+            hasQuest = false;
+            questComplete = false;
         }
         bool OnSessionLoaded(PlayerBotEntry* entry, WorldSession* sess) override;
         void UpdateAI(uint32 const) override;
     private:
         Unit* currentTarget;
         uint16 debugTimer;
+        bool hasQuest;
+        bool questComplete;
         bool initialized;
 };
 #endif
