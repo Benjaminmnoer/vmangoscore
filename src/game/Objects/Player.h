@@ -1094,8 +1094,8 @@ class Player final: public Unit
         void AddItemDurations(Item* item);
         void RemoveItemDurations(Item const* item);
         void SendItemDurations() const;
-        uint32 CountFreeInventorySlots() const;
     public:
+        uint32 CountFreeInventorySlots() const;
         Item* AddItem(uint32 itemId, uint32 count = 1);
         void InterruptSpellsWithCastItem(Item const* item);
         uint8 FindEquipSlot(ItemPrototype const* proto, uint32 slot, bool swap) const;

@@ -431,8 +431,27 @@ bool PlayerBotBaseAI::OnSessionLoaded(PlayerBotEntry *entry, WorldSession *sess)
     // Player* player = sess->GetPlayer();
     sLog.Out(LOG_BASIC, LOG_LVL_MINIMAL, "Base called");
 
+    UpdateGoapState(&goapState);
+
     // return SpawnNewPlayer(sess, player->GetClass(), player->GetRace(), player->GetMapId(), player->GetInstanceId(), player->GetPositionX(), player->GetPositionY(), player->GetPositionZ(), player->GetOrientation());
     sess->LoginPlayer(entry->playerGUID);
+    return true;
+}
+
+bool PlayerBotBaseAI::UpdateGoapState(PlayerBotState* state) 
+{
+    if (!state->SetPosition(me->GetPositionX(), me->GetPositionY(), me->GetPositionZ(), me->GetOrientation()))
+        sLog.Out(LOG_BASIC, LOG_LVL_ERROR, "Error setting GOAP position");
+    
+
+    if (!state->SetEmptyBagSlots(me->CountFreeInventorySlots()))
+        sLog.Out(LOG_BASIC, LOG_LVL_ERROR, "Error setting GOAP state");
+
+    for (uint8 i = 0; i < 20; i++)
+    {
+
+    }
+
     return true;
 }
 

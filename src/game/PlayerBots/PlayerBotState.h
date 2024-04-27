@@ -16,11 +16,59 @@
 
 #ifndef MANGOS_PLAYERBOTSTATE_H
 #define MANGOS_PLAYERBOTSTATE_H
-struct PlayerBotState
+
+#include <map>
+#include "Platform/Define.h"
+#include "Log.h"
+
+enum QuestStatus
 {
-	uint8_t lvl;
-	uint32_t gold;
-	uint8_t activeQuests;
-	uint32_t quest[20];
+	QUEST_ACCEPTED = 0,
+	QUEST_COMPLETED = 1
+};
+
+class PlayerBotState
+{
+public:
+	PlayerBotState() {};
+	bool SetPosition(float x, float y, float z, float o) { posX = x; posY = y; posZ = z; posO = o; }
+	bool SetEmptyBagSlots(uint8 emptySlots) { emptyBagSlots = emptySlots; }
+	uint32 GetQuest(uint8 index)
+	{
+		if (index <= activeQuests)
+		{
+			return quests[index];
+		}
+
+		sLog.Out(LOG_BASIC, LOG_LVL_ERROR, "Getting quest outside limits");
+		return 0;
+	}
+	bool AddQuest(uint32 questGuid)
+	{
+		if (activeQuests < 20)
+		{
+			quests.insert(std::pair<uint32, QuestStatus>(questGuid, QUEST_COMPLETED));
+		}
+
+		sLog.Out(LOG_BASIC, LOG_LVL_ERROR, "Quest limit reached");
+		return false;
+	}
+	bool RemoveQuest(uint32 questGuid)
+	{
+		return quests.erase(questGuid);
+	}
+private:
+	uint8 lvl;
+	float posX;
+	float posY;
+	float posZ;
+	float posO;
+	uint8 emptyBagSlots;
+	uint32 gold;
+	uint8 activeQuests;
+	std::map<uint32, QuestStatus> quests;
+	std::map<uint32, uint8> creatureKillCount;
+	std::map<uint32, uint8> itemCount;
+	std::map<uint32, bool> areaExplored;
 };
 #endif

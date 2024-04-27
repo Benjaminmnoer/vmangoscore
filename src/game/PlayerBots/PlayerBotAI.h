@@ -19,6 +19,7 @@
 
 #include "PlayerAI.h"
 #include "WorldSession.h"
+#include "PlayerBotState.h"
 
 struct PlayerBotEntry;
 class WorldSession;
@@ -105,16 +106,16 @@ class PlayerBotBaseAI : public PlayerBotAI
             currentTarget = nullptr;
             debugTimer = 0;
             initialized = false;
-            hasQuest = false;
-            questComplete = false;
+            goapState = PlayerBotState();
         }
         bool OnSessionLoaded(PlayerBotEntry* entry, WorldSession* sess) override;
         void UpdateAI(uint32 const) override;
     private:
         Unit* currentTarget;
         uint16 debugTimer;
-        bool hasQuest;
-        bool questComplete;
         bool initialized;
+        PlayerBotState goapState;
+
+        bool UpdateGoapState(PlayerBotState* state);
 };
 #endif
