@@ -447,11 +447,6 @@ bool PlayerBotBaseAI::UpdateGoapState(PlayerBotState* state)
     if (!state->SetEmptyBagSlots(me->CountFreeInventorySlots()))
         sLog.Out(LOG_BASIC, LOG_LVL_ERROR, "Error setting GOAP state");
 
-    for (uint8 i = 0; i < 20; i++)
-    {
-
-    }
-
     return true;
 }
 

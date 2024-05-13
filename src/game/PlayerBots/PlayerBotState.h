@@ -35,19 +35,18 @@ public:
 	bool SetEmptyBagSlots(uint8 emptySlots) { emptyBagSlots = emptySlots; }
 	uint32 GetQuest(uint8 index)
 	{
-		if (index <= activeQuests)
+		/*f (index <= activeQuests)
 		{
 			return quests[index];
-		}
+		}*/
 
-		sLog.Out(LOG_BASIC, LOG_LVL_ERROR, "Getting quest outside limits");
 		return 0;
 	}
 	bool AddQuest(uint32 questGuid)
 	{
 		if (activeQuests < 20)
 		{
-			quests.insert(std::pair<uint32, QuestStatus>(questGuid, QUEST_COMPLETED));
+			//quests.insert(std::pair<uint32, QuestStatus>(questGuid, QUEST_COMPLETED));
 		}
 
 		sLog.Out(LOG_BASIC, LOG_LVL_ERROR, "Quest limit reached");

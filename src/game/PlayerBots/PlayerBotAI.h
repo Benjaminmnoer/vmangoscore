@@ -114,6 +114,7 @@ class PlayerBotBaseAI : public PlayerBotAI
         Unit* currentTarget;
         uint16 debugTimer;
         bool initialized;
+        uint16 goapRecalculateTimer;
         PlayerBotState goapState;
 
         bool UpdateGoapState(PlayerBotState* state);
