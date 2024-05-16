@@ -22,23 +22,39 @@
 class PlayerBotAction
 {
 public:
-	PlayerBotAction(std::string actionName) { name = actionName; };
-	virtual bool canExecuteAction() = 0;
-	virtual bool canExecuteActionGiven() = 0;
+	PlayerBotAction() {};
+	PlayerBotAction(std::string actionName, ) { name = actionName; };
+	virtual bool canExecuteAction(WorldSession* session) = 0;
+	virtual bool canExecuteActionGiven(WorldSession* session, uint8 given[64]) = 0;
 	virtual bool executeAction() = 0;
 private:
 	std::string name;
+	uint8 preconditions[64];
 };
 
 class KillEnemyAction : PlayerBotAction
 {
 public:
-	explicit KillEnemyAction(std::string actionName, uint32_t targetGuid) : PlayerBotAction(actionName) 
+	KillEnemyAction() {};
+	explicit KillEnemyAction(std::string actionName, uint32 targetGuid) : PlayerBotAction(actionName) 
 	{
 		_targetGuid = targetGuid;
 	}
-	bool canExecuteAction();
-	bool canExecuteActionGiven();
+
+	bool canExecuteAction(WorldSession* session)
+	{
+		return true;
+	}
+
+	bool canExecuteActionGiven(WorldSession* session, uint8 given[64])
+	{
+		return true;
+	}
+
+	bool executeAction()
+	{
+		return true;
+	}
 private:
 	uint32_t _targetGuid;
 };

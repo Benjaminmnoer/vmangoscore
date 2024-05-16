@@ -56,6 +56,10 @@ public:
 	{
 		return quests.erase(questGuid);
 	}
+	bool SetLevel(uint8 level)
+	{
+
+	}
 private:
 	uint8 lvl;
 	float posX;
