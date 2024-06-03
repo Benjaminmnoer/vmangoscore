@@ -14,9 +14,7 @@ pipeline {
         stage('Build') { 
             steps { 
                 script {
-                    dir('contrib/docker-build/') {
-                        def app = docker.build("registry.benjaminmnoer.dk/vmangos")
-                    }
+                    def app = docker.build("registry.benjaminmnoer.dk/vmangos")
                 }
             }
         }
