@@ -33,7 +33,7 @@ pipeline {
                         if (env.BRANCH_NAME == 'master') {
                             image.push("latest")
                         } else {
-                            image.push("test")
+                            image.push(env.BRANCH_NAME)
                         }
                     }
                 }
