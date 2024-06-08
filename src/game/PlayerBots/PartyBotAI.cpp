@@ -2399,6 +2399,14 @@ void PartyBotAI::UpdateOutOfCombatAI_Warrior()
 
 void PartyBotAI::UpdateInCombatAI_Warrior()
 {
+    if (m_spells.warrior.pBattleShout &&
+        !me->HasAura(m_spells.warrior.pBattleShout->Id) &&
+        CanTryToCastSpell(me, m_spells.warrior.pBattleShout))
+    {
+        if (DoCastSpell(me, m_spells.warrior.pBattleShout) == SPELL_CAST_OK)
+            return;
+    }
+
     if (Unit* pVictim = me->GetVictim())
     {
         if (pVictim->IsNonMeleeSpellCasted(false, false, true))
@@ -2479,19 +2487,19 @@ void PartyBotAI::UpdateInCombatAI_Warrior()
             }
         }
 
-        if (m_spells.warrior.pThunderClap &&
-            m_role == ROLE_TANK &&
-            CanTryToCastSpell(pVictim, m_spells.warrior.pThunderClap))
-        {
-            if (DoCastSpell(pVictim, m_spells.warrior.pThunderClap) == SPELL_CAST_OK)
-                return;
-        }
-
         if (m_spells.warrior.pSunderArmor &&
             m_role == ROLE_TANK &&
             CanTryToCastSpell(pVictim, m_spells.warrior.pSunderArmor))
         {
             if (DoCastSpell(pVictim, m_spells.warrior.pSunderArmor) == SPELL_CAST_OK)
+                return;
+        }
+        
+        if (m_spells.warrior.pThunderClap &&
+            m_role == ROLE_TANK &&
+            CanTryToCastSpell(pVictim, m_spells.warrior.pThunderClap))
+        {
+            if (DoCastSpell(pVictim, m_spells.warrior.pThunderClap) == SPELL_CAST_OK)
                 return;
         }
 
@@ -2644,15 +2652,6 @@ void PartyBotAI::UpdateInCombatAI_Warrior()
                         return;
                 }
             }
-        }
-    }
-    else // no victim
-    {
-        if (m_spells.warrior.pBattleShout &&
-            CanTryToCastSpell(me, m_spells.warrior.pBattleShout))
-        {
-            if (DoCastSpell(me, m_spells.warrior.pBattleShout) == SPELL_CAST_OK)
-                return;
         }
     }
 }
